@@ -1,14 +1,14 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
-	"encoding/json"
+
 	"github.com/spf13/cobra"
 )
 
-// enqueueCmd represents the enqueue command
 var enqueueCmd = &cobra.Command{
 	Use:   "enqueue",
 	Short: "used for adding jobs inside the queue",
@@ -17,47 +17,52 @@ var enqueueCmd = &cobra.Command{
 	which consists of essential details related to the job specification`,
 	Run: func(cmd *cobra.Command, args []string) {
 
+		// Temporary ID (your code still sets this to 1 every time)
 		var jobId = 0
 		var jobAttempts = 0
 		var job_maxRetries = 0
-		var job jobSpec;
+
+		// Create the job
+		var job jobSpec
 		jobId += 1
 		job.Id = jobId
 		job.Command = "command not found"
-		job.State = "pending" 
+		job.State = "pending"
 		job.Attempts = jobAttempts
 		job.Max_retries = job_maxRetries
 		job.Created_at = time.Now().String()[0:19]
 		job.Updated_at = time.Now().String()[0:19]
 
-
-		jsonData,err := json.Marshal(job)
-
-		if err != nil{
-			fmt.Println("Error encoding json file")
+		// Convert to JSON
+		jsonData, err := json.Marshal(job)
+		if err != nil {
+			fmt.Println("Error encoding JSON:", err)
+			return
 		}
 
-		err = os.WriteFile("data.json",jsonData,0644)
+		// Open file in append mode (this is the FIX)
+		file, err := os.OpenFile(
+			"data.json",
+			os.O_APPEND|os.O_CREATE|os.O_WRONLY,
+			0644,
+		)
+		if err != nil {
+			fmt.Println("Error opening JSON file:", err)
+			return
+		}
+		defer file.Close()
 
-		if err != nil{
-			fmt.Println("error creating json file")
-			return 
+		// Write the JSON + newline (this is the FIX)
+		_, err = file.Write(append(jsonData, '\n'))
+		if err != nil {
+			fmt.Println("Error writing to JSON file:", err)
+			return
 		}
 
-		fmt.Println(jobId)
+		fmt.Println("Job added successfully!")
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(enqueueCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// enqueueCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// enqueueCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
