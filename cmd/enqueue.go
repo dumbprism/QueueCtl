@@ -3,11 +3,13 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"os"
 	"time"
-
 	"github.com/spf13/cobra"
 )
+
+var userCommand string
 
 var enqueueCmd = &cobra.Command{
 	Use:   "enqueue",
@@ -17,16 +19,29 @@ var enqueueCmd = &cobra.Command{
 	which consists of essential details related to the job specification`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		// Temporary ID (your code still sets this to 1 every time)
-		var jobId = 0
+		// Create random ID
+		var charset = "abcdefghijklmnopqrstuvwqyz1234567890"
+		var jobId = ""
+
+		for i := 0; i < 8; i++ {
+			jobId += string(charset[rand.Intn(len(charset))])
+		}
+
+		// Other job fields
 		var jobAttempts = 0
 		var job_maxRetries = 0
 
 		// Create the job
 		var job jobSpec
-		jobId += 1
 		job.Id = jobId
-		job.Command = "command not found"
+
+		// Use user-provided command OR fallback
+		if userCommand == "" {
+			job.Command = "command not found"
+		} else {
+			job.Command = userCommand
+		}
+
 		job.State = "pending"
 		job.Attempts = jobAttempts
 		job.Max_retries = job_maxRetries
@@ -40,19 +55,20 @@ var enqueueCmd = &cobra.Command{
 			return
 		}
 
-		// Open file in append mode (this is the FIX)
+		// Open file in append mode
 		file, err := os.OpenFile(
-			"data.json",
+			"data.jsonl",
 			os.O_APPEND|os.O_CREATE|os.O_WRONLY,
 			0644,
 		)
+		
 		if err != nil {
 			fmt.Println("Error opening JSON file:", err)
 			return
 		}
 		defer file.Close()
 
-		// Write the JSON + newline (this is the FIX)
+		// Write JSON line
 		_, err = file.Write(append(jsonData, '\n'))
 		if err != nil {
 			fmt.Println("Error writing to JSON file:", err)
@@ -65,4 +81,7 @@ var enqueueCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(enqueueCmd)
+
+	// Add the --command flag (simple and clean)
+	enqueueCmd.Flags().StringVarP(&userCommand, "command", "c", "no command found", "Command for the job")
 }
