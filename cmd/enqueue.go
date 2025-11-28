@@ -1,41 +1,65 @@
 package cmd
 
 import (
-	"encoding/json"
+	"database/sql"
 	"fmt"
 	"math/rand"
 	"os"
 	"time"
+
 	"github.com/spf13/cobra"
+	_ "modernc.org/sqlite"
 )
 
 var userCommand string
 
 var enqueueCmd = &cobra.Command{
 	Use:   "enqueue",
-	Short: "used for adding jobs inside the queue",
-	Long: `The enqueue command helps to add job specification inside 
-	which would help the workers to pick jobs based on a static job map
-	which consists of essential details related to the job specification`,
+	Short: "Add a job to the queue",
+	Long:  "This command adds a new job to the SQLite database with all required fields.",
 	Run: func(cmd *cobra.Command, args []string) {
 
-		// Create random ID
-		var charset = "abcdefghijklmnopqrstuvwqyz1234567890"
+		
+		os.MkdirAll("data", 0755)
+
+		database, err := sql.Open("sqlite", "data/queue.db")
+		if err != nil {
+			fmt.Println("Error connecting to SQLite database:", err)
+			return
+		}
+		defer database.Close()
+
+		
+		createTableQuery := `
+		CREATE TABLE IF NOT EXISTS jobs (
+			Id TEXT PRIMARY KEY,
+			Command TEXT,
+			State TEXT,
+			Attempts INTEGER,
+			Max_retries INTEGER,
+			Created_at TEXT,
+			Updated_at TEXT
+		);`
+
+		_, err = database.Exec(createTableQuery)
+		if err != nil {
+			fmt.Println("Error creating jobs table:", err)
+			return
+		}
+
+		var charset = "abcdefghijklmnopqrstuvwxyz1234567890"
 		var jobId = ""
 
 		for i := 0; i < 8; i++ {
 			jobId += string(charset[rand.Intn(len(charset))])
 		}
 
-		// Other job fields
 		var jobAttempts = 0
 		var job_maxRetries = 0
 
-		// Create the job
 		var job jobSpec
 		job.Id = jobId
 
-		// Use user-provided command OR fallback
 		if userCommand == "" {
 			job.Command = "command not found"
 		} else {
@@ -45,43 +69,36 @@ var enqueueCmd = &cobra.Command{
 		job.State = "pending"
 		job.Attempts = jobAttempts
 		job.Max_retries = job_maxRetries
-		job.Created_at = time.Now().String()[0:19]
-		job.Updated_at = time.Now().String()[0:19]
+		job.Created_at = time.Now().Format("2006-01-02 15:04:05")
+		job.Updated_at = time.Now().Format("2006-01-02 15:04:05")
 
-		// Convert to JSON
-		jsonData, err := json.Marshal(job)
-		if err != nil {
-			fmt.Println("Error encoding JSON:", err)
-			return
-		}
-
-		// Open file in append mode
-		file, err := os.OpenFile(
-			"data.jsonl",
-			os.O_APPEND|os.O_CREATE|os.O_WRONLY,
-			0644,
-		)
 		
+		insertQuery := `
+			INSERT INTO jobs (Id, Command, State, Attempts, Max_retries, Created_at, Updated_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?)
+		`
+		_, err = database.Exec(
+			insertQuery,
+			job.Id,
+			job.Command,
+			job.State,
+			job.Attempts,
+			job.Max_retries,
+			job.Created_at,
+			job.Updated_at,
+		)
+
 		if err != nil {
-			fmt.Println("Error opening JSON file:", err)
+			fmt.Println("Error inserting values:", err)
 			return
 		}
-		defer file.Close()
 
-		// Write JSON line
-		_, err = file.Write(append(jsonData, '\n'))
-		if err != nil {
-			fmt.Println("Error writing to JSON file:", err)
-			return
-		}
-
-		fmt.Println("Job added successfully!")
+		
+		fmt.Println("Job added successfully with ID:", job.Id)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(enqueueCmd)
-
-	// Add the --command flag (simple and clean)
-	enqueueCmd.Flags().StringVarP(&userCommand, "command", "c", "no command found", "Command for the job")
+	enqueueCmd.Flags().StringVarP(&userCommand, "command", "c", "", "Command for the job")
 }
