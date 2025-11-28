@@ -33,7 +33,7 @@ to quickly create a Cobra application.`,
 
 		defer database.Close()
 
-		row,err := database.Query("SELECT Id,Command,State,Attempts,Max_retries,Created_at,Updated_at FROM jobs")
+		row,err := database.Query("SELECT * FROM jobs")
 
 		if err != nil{
 			fmt.Println("error : ",err)
