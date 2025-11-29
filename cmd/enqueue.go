@@ -38,7 +38,8 @@ var enqueueCmd = &cobra.Command{
 			Attempts INTEGER,
 			Max_retries INTEGER,
 			Created_at TEXT,
-			Updated_at TEXT
+			Updated_at TEXT,
+			
 		);`
 
 		_, err = database.Exec(createTableQuery)
@@ -73,10 +74,12 @@ var enqueueCmd = &cobra.Command{
 		job.Updated_at = time.Now().Format("2006-01-02 15:04:05")
 
 		
-		insertQuery := `
-			INSERT INTO jobs (Id, Command, State, Attempts, Max_retries, Created_at, Updated_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?)
+				insertQuery := `
+			INSERT INTO jobs (
+				Id, Command, State, Attempts, Max_retries, Created_at, Updated_at
+			) VALUES (?, ?, ?, ?, ?, ?, ?)
 		`
+
 		_, err = database.Exec(
 			insertQuery,
 			job.Id,
@@ -87,6 +90,7 @@ var enqueueCmd = &cobra.Command{
 			job.Created_at,
 			job.Updated_at,
 		)
+
 
 		if err != nil {
 			fmt.Println("Error inserting values:", err)

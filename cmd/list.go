@@ -25,6 +25,9 @@ var listCmd = &cobra.Command{
 		}
 		defer database.Close()
 
+		// -------------------------------
+		// Build the query based on flag
+		// -------------------------------
 		var query string
 
 		if checkStateCmd == "" {

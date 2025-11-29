@@ -28,6 +28,10 @@ func Migrate(db *sql.DB) error {
     Value TEXT
 	);
 
+	CREATE TABLE IF NOT EXISTS config (
+		Key TEXT PRIMARY KEY,
+		Value TEXT
+	);
 	`
 
 	_, err := db.Exec(query)

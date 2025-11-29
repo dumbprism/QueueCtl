@@ -94,7 +94,7 @@ var statusCmd = &cobra.Command{
 			fmt.Println("No active workers.")
 		}
 
-		fmt.Println("\n===========================\n")
+		fmt.Println("===========================")
 	},
 }
 
