@@ -1,10 +1,11 @@
 package db
 
 import (
-	"log"
+	"database/sql"
+	"fmt"
 )
 
-func Migrate() error {
+func Migrate(db *sql.DB) error {
 	query := `
 	CREATE TABLE IF NOT EXISTS jobs (
 		Id TEXT PRIMARY KEY,
@@ -15,14 +16,25 @@ func Migrate() error {
 		Created_at TEXT,
 		Updated_at TEXT
 	);
+
+	CREATE TABLE IF NOT EXISTS workers (
+		WorkerId TEXT PRIMARY KEY,
+		Started_at TEXT,
+		Last_heartbeat TEXT
+	);
+
+	CREATE TABLE IF NOT EXISTS control (
+    Key TEXT PRIMARY KEY,
+    Value TEXT
+	);
+
 	`
 
-	_, err := DB.Exec(query)
+	_, err := db.Exec(query)
 	if err != nil {
-		log.Fatal("Failed to create table:", err)
-		return err
+		return fmt.Errorf("migration failed: %w", err)
 	}
 
-	log.Println("Migration completed successfully")
+	fmt.Println("Migration completed successfully")
 	return nil
 }

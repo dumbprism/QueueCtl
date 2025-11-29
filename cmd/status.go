@@ -1,44 +1,100 @@
 package cmd
 
 import (
-	"fmt"
-	_ "modernc.org/sqlite"
 	"database/sql"
+	"fmt"
+	"os"
+
 	"github.com/spf13/cobra"
+	_ "modernc.org/sqlite"
 )
 
-// statusCmd represents the status command
 var statusCmd = &cobra.Command{
 	Use:   "status",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:`,
+	Short: "Show all job states and active workers",
 	Run: func(cmd *cobra.Command, args []string) {
-		database,err := sql.Open("sqlite","data/queue.db")
 
-		if err != nil{
-			fmt.Println("There is an error in the database : ",err)
+		// Ensure database folder exists
+		os.MkdirAll("data", 0755)
+
+		// Connect to database
+		db, err := sql.Open("sqlite", "data/queue.db")
+		if err != nil {
+			fmt.Println("Database error:", err)
+			return
 		}
-		defer database.Close();
+		defer db.Close()
 
-		rows,err := database.Query(`SELECT Id,State FROM jobs`)
+		// ----------------------------------------------------
+		// 1. FETCH AND DISPLAY ALL JOB STATES
+		// ----------------------------------------------------
+		fmt.Println("\n===== JOB STATES =====")
 
-		if err!=nil{
-			fmt.Println("row not recorded : ",err)
+		jobRows, err := db.Query(`SELECT Id, State FROM jobs ORDER BY Created_at DESC`)
+		if err != nil {
+			fmt.Println("Error fetching jobs:", err)
+			return
 		}
+		defer jobRows.Close()
 
-		for rows.Next(){
+		hasJobs := false
+
+		for jobRows.Next() {
+			hasJobs = true
 			var Id string
 			var State string
-			
-			err = rows.Scan(&Id,&State)
 
-			if err !=nil{
-				fmt.Println("There seems to be an error : ",err)
+			err = jobRows.Scan(&Id, &State)
+			if err != nil {
+				fmt.Println("Error reading job:", err)
+				continue
 			}
 
-			fmt.Printf("\nID:%s\nState:%s",Id,State)
+			fmt.Printf("ID: %s   State: %s\n", Id, State)
 		}
+
+		if !hasJobs {
+			fmt.Println("No jobs found.")
+		}
+
+		// ----------------------------------------------------
+		// 2. FETCH AND DISPLAY ACTIVE WORKERS
+		// ----------------------------------------------------
+		fmt.Println("\n===== ACTIVE WORKERS =====")
+
+		workerRows, err := db.Query(`
+			SELECT WorkerId, Last_heartbeat 
+			FROM workers 
+			ORDER BY Last_heartbeat DESC
+		`)
+		if err != nil {
+			fmt.Println("Error fetching workers:", err)
+			return
+		}
+		defer workerRows.Close()
+
+		hasWorkers := false
+
+		for workerRows.Next() {
+			hasWorkers = true
+
+			var WorkerId string
+			var LastHeartbeat string
+
+			err = workerRows.Scan(&WorkerId, &LastHeartbeat)
+			if err != nil {
+				fmt.Println("Error reading worker:", err)
+				continue
+			}
+
+			fmt.Printf("Worker: %s   Heartbeat: %s\n", WorkerId, LastHeartbeat)
+		}
+
+		if !hasWorkers {
+			fmt.Println("No active workers.")
+		}
+
+		fmt.Println("\n===========================\n")
 	},
 }
 

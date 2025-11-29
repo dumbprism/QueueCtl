@@ -1,73 +1,68 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
 	"database/sql"
 	"fmt"
 	"os"
+
 	"github.com/spf13/cobra"
 	_ "modernc.org/sqlite"
 )
 
-// listCmd represents the list command
+var checkStateCmd string
+
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "List jobs from the database",
 	Run: func(cmd *cobra.Command, args []string) {
 
-		os.MkdirAll("data",0755)
+		os.MkdirAll("data", 0755)
 
-		database,err := sql.Open("sqlite","data/queue.db")
-
-		if err !=nil{
-			fmt.Println("facing an error :",err)
+		database, err := sql.Open("sqlite", "data/queue.db")
+		if err != nil {
+			fmt.Println("DB error:", err)
+			return
 		}
-
 		defer database.Close()
 
-		row,err := database.Query("SELECT * FROM jobs")
+		var query string
 
-		if err != nil{
-			fmt.Println("error : ",err)
+		if checkStateCmd == "" {
+			query = "SELECT * FROM jobs"
+		} else {
+			query = "SELECT * FROM jobs WHERE State = ?"
 		}
-		defer row.Close()
 
-		
+		var rows *sql.Rows
+		if checkStateCmd == "" {
+			rows, err = database.Query(query)
+		} else {
+			rows, err = database.Query(query, checkStateCmd)
+		}
 
-		for row.Next(){
-			var Id string
-			var Command string
-			var State string
-			var Attempts int
-			var Max_retries int
-			var Created_at string
-			var Updated_at string
+		if err != nil {
+			fmt.Println("Query error:", err)
+			return
+		}
+		defer rows.Close()
 
-			err = row.Scan(&Id,&Command,&State,&Attempts,&Max_retries,&Created_at,&Updated_at)
+		for rows.Next() {
+			var Id, Command, State, Created_at, Updated_at string
+			var Attempts, Max_retries int
 
-			if err !=nil{
-				fmt.Println("Error reading row : ",err)
+			err = rows.Scan(&Id, &Command, &State, &Attempts, &Max_retries, &Created_at, &Updated_at)
+			if err != nil {
+				fmt.Println("Row error:", err)
 				continue
 			}
 
-			fmt.Printf("\nID: %s\nCommand: %s\nState: %s\nAttempts: %d\nMax Retries: %d\nCreated At: %s\nUpdated At: %s\n",Id, Command, State, Attempts, Max_retries, Created_at, Updated_at)
-
+			fmt.Printf("\nID: %s\nCommand: %s\nState: %s\nAttempts: %d\nMax Retries: %d\nCreated At: %s\nUpdated At: %s\n",
+				Id, Command, State, Attempts, Max_retries, Created_at, Updated_at)
 		}
-		
-
-
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(listCmd)
-
+	listCmd.Flags().StringVarP(&checkStateCmd, "state", "s", "", "Filter jobs by state")
 }
