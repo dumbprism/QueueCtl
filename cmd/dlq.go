@@ -79,7 +79,7 @@ var dlqListCmd = &cobra.Command{
 // ---------------------------------------------------------
 var dlqRetryCmd = &cobra.Command{
 	Use:   "retry <jobId>",
-	Short: "Retry a dead job",
+	Short: "Retry a dead job by resetting it to pending state",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 
@@ -111,26 +111,34 @@ var dlqRetryCmd = &cobra.Command{
 
 		if currentState != "dead" {
 			fmt.Println("Job is not dead. Cannot retry via DLQ.")
+			fmt.Printf("Current state: %s\n", currentState)
 			return
 		}
 
-		// Reset job and requeue it
+		// Get configured max-retries from config table
+		var cfgMaxRetries int = 3 // default
+		row := db.QueryRow(`SELECT Value FROM config WHERE Key='max-retries'`)
+		row.Scan(&cfgMaxRetries)
+
+		// Reset job and requeue it with configured max_retries
 		_, err = db.Exec(`
 			UPDATE jobs
 			SET 
 				State = 'pending',
 				Attempts = 0,
-				Max_retries = 3,
+				Max_retries = ?,
+				Next_run_at = NULL,
+				WorkerId = NULL,
 				Updated_at = ?
 			WHERE Id = ?
-		`, time.Now().Format("2006-01-02 15:04:05"), jobId)
+		`, cfgMaxRetries, time.Now().Format("2006-01-02 15:04:05"), jobId)
 
 		if err != nil {
 			fmt.Println("Error retrying job:", err)
 			return
 		}
 
-		fmt.Println("Job", jobId, "has been requeued with max_retries = 3.")
+		fmt.Printf("✅ Job %s has been requeued with max_retries = %d\n", jobId, cfgMaxRetries)
 	},
 }
 
