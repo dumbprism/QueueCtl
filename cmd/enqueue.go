@@ -19,7 +19,6 @@ var enqueueCmd = &cobra.Command{
 	Long:  "This command adds a new job to the SQLite database with all required fields.",
 	Run: func(cmd *cobra.Command, args []string) {
 
-		
 		os.MkdirAll("data", 0755)
 
 		database, err := sql.Open("sqlite", "data/queue.db")
@@ -29,7 +28,7 @@ var enqueueCmd = &cobra.Command{
 		}
 		defer database.Close()
 
-		
+		// Create table with all columns including WorkerId and Next_run_at
 		createTableQuery := `
 		CREATE TABLE IF NOT EXISTS jobs (
 			Id TEXT PRIMARY KEY,
@@ -37,9 +36,10 @@ var enqueueCmd = &cobra.Command{
 			State TEXT,
 			Attempts INTEGER,
 			Max_retries INTEGER,
+			WorkerId TEXT,
+			Next_run_at TEXT DEFAULT CURRENT_TIMESTAMP,
 			Created_at TEXT,
-			Updated_at TEXT,
-			
+			Updated_at TEXT
 		);`
 
 		_, err = database.Exec(createTableQuery)
@@ -73,11 +73,10 @@ var enqueueCmd = &cobra.Command{
 		job.Created_at = time.Now().Format("2006-01-02 15:04:05")
 		job.Updated_at = time.Now().Format("2006-01-02 15:04:05")
 
-		
-				insertQuery := `
+		insertQuery := `
 			INSERT INTO jobs (
-				Id, Command, State, Attempts, Max_retries, Created_at, Updated_at
-			) VALUES (?, ?, ?, ?, ?, ?, ?)
+				Id, Command, State, Attempts, Max_retries, WorkerId, Next_run_at, Created_at, Updated_at
+			) VALUES (?, ?, ?, ?, ?, NULL, datetime('now'), ?, ?)
 		`
 
 		_, err = database.Exec(
@@ -91,13 +90,11 @@ var enqueueCmd = &cobra.Command{
 			job.Updated_at,
 		)
 
-
 		if err != nil {
 			fmt.Println("Error inserting values:", err)
 			return
 		}
 
-		
 		fmt.Println("Job added successfully with ID:", job.Id)
 	},
 }

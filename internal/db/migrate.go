@@ -13,6 +13,8 @@ func Migrate(db *sql.DB) error {
 		State TEXT,
 		Attempts INTEGER,
 		Max_retries INTEGER,
+		WorkerId TEXT,
+		Next_run_at TEXT DEFAULT CURRENT_TIMESTAMP,
 		Created_at TEXT,
 		Updated_at TEXT
 	);
@@ -24,8 +26,8 @@ func Migrate(db *sql.DB) error {
 	);
 
 	CREATE TABLE IF NOT EXISTS control (
-    Key TEXT PRIMARY KEY,
-    Value TEXT
+		Key TEXT PRIMARY KEY,
+		Value TEXT
 	);
 
 	CREATE TABLE IF NOT EXISTS config (
@@ -38,6 +40,10 @@ func Migrate(db *sql.DB) error {
 	if err != nil {
 		return fmt.Errorf("migration failed: %w", err)
 	}
+
+	// Add missing columns to existing tables if needed
+	db.Exec(`ALTER TABLE jobs ADD COLUMN WorkerId TEXT`)
+	db.Exec(`ALTER TABLE jobs ADD COLUMN Next_run_at TEXT DEFAULT CURRENT_TIMESTAMP`)
 
 	fmt.Println("Migration completed successfully")
 	return nil

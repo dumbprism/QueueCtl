@@ -2,19 +2,19 @@ package cmd
 
 import (
 	"os"
+
 	"github.com/spf13/cobra"
 )
 
 type jobSpec struct {
-	Id          string 	`json:"id"`
-	Command     string 	`json:"command"`
-	State       string 	`json:"state"`
-	Attempts    int    	`json:"attempts"`
-	Max_retries int    	`json:"max_retries"`
-	Created_at  string 	`json:"created_at"`
-	Updated_at  string 	`json:"updated_at"`
+	Id          string `json:"id"`
+	Command     string `json:"command"`
+	State       string `json:"state"`
+	Attempts    int    `json:"attempts"`
+	Max_retries int    `json:"max_retries"`
+	Created_at  string `json:"created_at"`
+	Updated_at  string `json:"updated_at"`
 }
-
 
 var rootCmd = &cobra.Command{
 	Use:   "queuectl",
