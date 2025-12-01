@@ -25,9 +25,7 @@ var statusCmd = &cobra.Command{
 		}
 		defer db.Close()
 
-		// ----------------------------------------------------
-		// 1. FETCH AND DISPLAY ALL JOB STATES
-		// ----------------------------------------------------
+	
 		fmt.Println("\n===== JOB STATES =====")
 
 		jobRows, err := db.Query(`SELECT Id, State FROM jobs ORDER BY Created_at DESC`)
@@ -57,9 +55,6 @@ var statusCmd = &cobra.Command{
 			fmt.Println("No jobs found.")
 		}
 
-		// ----------------------------------------------------
-		// 2. FETCH AND DISPLAY ACTIVE WORKERS
-		// ----------------------------------------------------
 		fmt.Println("\n===== ACTIVE WORKERS =====")
 
 		workerRows, err := db.Query(`
