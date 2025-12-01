@@ -15,9 +15,7 @@ var dlqCmd = &cobra.Command{
 	Short: "Dead Letter Queue operations",
 }
 
-// ---------------------------------------------------------
-// LIST DEAD JOBS → queuectl dlq list
-// ---------------------------------------------------------
+
 var dlqListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all dead jobs",
@@ -74,9 +72,7 @@ var dlqListCmd = &cobra.Command{
 	},
 }
 
-// ---------------------------------------------------------
-// RETRY DEAD JOB → queuectl dlq retry <jobId>
-// ---------------------------------------------------------
+
 var dlqRetryCmd = &cobra.Command{
 	Use:   "retry <jobId>",
 	Short: "Retry a dead job by resetting it to pending state",
